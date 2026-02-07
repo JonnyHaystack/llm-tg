@@ -1,6 +1,6 @@
 import { tool, zodSchema, generateText } from "ai";
 import { z } from "zod";
-import { google } from "../gemini";
+import { google } from "../providers/gemini";
 import { logger } from "../../utils/logger";
 
 const systemPrompt = [

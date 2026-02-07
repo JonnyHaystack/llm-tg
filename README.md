@@ -1,6 +1,6 @@
 # gemini-tg
 
-A Telegram bot powered by Google's Gemini AI with multimodal support (text + images) and function calling capabilities for web search and image generation.
+A Telegram bot powered by OpenRouter AI with multimodal support (text + images) and function calling capabilities for web search and image generation.
 
 ## Features
 
@@ -41,10 +41,11 @@ The bot uses Gemini's function calling feature to provide enhanced capabilities:
 
 ### Key Components
 
-- **`gemini.ts`**: Creates the main chat model with function tool declarations
+- **`openrouter.ts`**: Creates the main chat model using OpenRouter
+- **`gemini.ts`**: Provides Gemini models for tool functions (web search and image generation)
 - **`chat.ts`**: Handles the function calling loop - when the model requests a function, executes it and feeds results back
 - **`web-search.ts`**: Executes web searches using Gemini's Google Search grounding tool
-- **`text-to-img.ts`**: Generates images using Gemini's image generation model
+
 - **`index.ts`**: Telegram bot handlers that coordinate everything and send responses
 
 ### How It Works
@@ -73,6 +74,16 @@ The bot supports Gemini's vision capabilities by:
 Images are sent as `Part` objects with `inlineData` containing the base64-encoded image data and MIME type.
 
 ## Setup
+
+### Environment Variables
+
+You need to set the following environment variables:
+
+- `OPENROUTER_API_KEY` - Your OpenRouter API key (for main chat model)
+- `GEMINI_API_KEY` - Your Google Gemini API key (for web search and image generation tools)
+- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
+
+### Installation
 
 To install dependencies:
 

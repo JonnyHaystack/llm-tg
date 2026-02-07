@@ -43,7 +43,7 @@ export async function sendResponse(
     // Send text as separate message (not as reply)
     const formattedText = await formatText(response.text);
     await ctx.reply(formattedText, {
-      parse_mode: "MarkdownV2",
+      parse_mode: "HTML",
     });
   } else if (hasImages) {
     // Only images, no text
@@ -70,7 +70,7 @@ export async function sendResponse(
     // Only text, no images
     const text = await formatText(response.text);
     await ctx.reply(text, {
-      parse_mode: "MarkdownV2",
+      parse_mode: "HTML",
       reply_parameters: { message_id: ctx.message.message_id },
     });
   }

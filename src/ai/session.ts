@@ -1,15 +1,34 @@
 import type { ModelMessage } from "ai";
 
-const chatMap = new Map<string, ModelMessage[]>();
+type ChatState = {
+  history: ModelMessage[];
+  modelId?: string;
+};
 
-export function getOrCreateChat(chatId: string): ModelMessage[] {
+const chatMap = new Map<string, ChatState>();
+
+function getOrCreateChatState(chatId: string): ChatState {
   if (!chatMap.has(chatId)) {
-    chatMap.set(chatId, []);
+    chatMap.set(chatId, { history: [] });
   }
   return chatMap.get(chatId)!;
 }
 
+export function getOrCreateChat(chatId: string): ModelMessage[] {
+  return getOrCreateChatState(chatId).history;
+}
+
 export function resetChat(chatId: string) {
-  chatMap.set(chatId, []);
-  return chatMap.get(chatId)!;
+  const state = getOrCreateChatState(chatId);
+  state.history = [];
+  return state.history;
+}
+
+export function getChatModelId(chatId: string): string | undefined {
+  return getOrCreateChatState(chatId).modelId;
+}
+
+export function setChatModelId(chatId: string, modelId: string) {
+  const state = getOrCreateChatState(chatId);
+  state.modelId = modelId;
 }

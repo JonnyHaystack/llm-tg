@@ -1,9 +1,8 @@
-import { generateText, stepCountIs, type ModelMessage } from "ai";
+import { generateText, stepCountIs, type UserContent } from "ai";
 import { logger } from "../utils/logger";
-import { getOrCreateChat, resetChat } from "./session";
-import { google } from "./gemini";
+import { getChatModelId, getOrCreateChat, resetChat } from "./session";
+import { groq } from "./providers/groq";
 import { googleSearchTool } from "./tools/web-search";
-import { createGenerateImageTool } from "./tools/text-to-img";
 import type { InputFile } from "grammy";
 
 export type MessageContext = {
@@ -31,30 +30,27 @@ export type SendMessageResult = {
 
 export const systemPrompt = [
   "You are a helpful chat bot in a group chat setting. You should comply to user requests wherever possible.",
-  "You must only respond in a Telegram MarkdownV2 compatible response: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\\ncode\\n```",
-  "Don't worry about formalities.",
+  "You must only respond in a small subset of valid markdown: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\\ncode\\n```",
+  "Don't worry about formalities, but respond in a pleasant manner.",
   "Be concise while still conveying substantially all information relevant to any question.",
 ].join("\n");
 
-const chatModel = google("gemini-2.5-flash");
+export const DEFAULT_MODEL_ID = "moonshotai/kimi-k2-instruct-0905";
 
-export async function sendMessage({
-  chatId,
-  messageContext,
-  message,
-  images,
-}: SendMessageParams): Promise<SendMessageResult> {
-  const history: ModelMessage[] = getOrCreateChat(chatId);
-  const log = logger.child({ chatId });
+function resolveChatModel(chatId: string) {
+  const selection = getChatModelId(chatId);
+  return groq(selection ?? DEFAULT_MODEL_ID);
+}
 
-  // Build context string
+function buildMessageContent(
+  message: string,
+  messageContext: MessageContext,
+  images?: ImageData[],
+): UserContent {
   const contextString = `Context: ${JSON.stringify(messageContext)}`;
-
-  // Construct user message content parts
-  const content: (
-    | { type: "text"; text: string }
-    | { type: "file"; data: string; mediaType: string }
-  )[] = [{ type: "text", text: `${contextString}\nMessage: ${message}` }];
+  const content: UserContent = [
+    { type: "text", text: `${contextString}\nMessage: ${message}` },
+  ];
 
   if (images && images.length > 0) {
     for (const img of images) {
@@ -66,8 +62,25 @@ export async function sendMessage({
     }
   }
 
+  return content;
+}
+
+export async function sendMessage({
+  chatId,
+  messageContext,
+  message,
+  images,
+}: SendMessageParams): Promise<SendMessageResult> {
+  const log = logger.child({ chatId });
+
+  const history = getOrCreateChat(chatId);
+  const chatModel = resolveChatModel(chatId);
+
   // Add to history
-  history.push({ role: "user", content });
+  history.push({
+    role: "user",
+    content: buildMessageContent(message, messageContext, images),
+  });
 
   const generatedImages: InputFile[] = [];
 
@@ -78,7 +91,6 @@ export async function sendMessage({
       messages: history,
       tools: {
         googleSearch: googleSearchTool,
-        generateImage: createGenerateImageTool(generatedImages),
       },
       stopWhen: stepCountIs(5),
     });
@@ -102,13 +114,18 @@ export async function newChat({
   chatId: string;
   messageContext: MessageContext;
 }): Promise<SendMessageResult> {
-  const history: ModelMessage[] = resetChat(chatId);
   const log = logger.child({ chatId });
-  const context = JSON.stringify(messageContext);
 
-  const initialMessage = `Context: ${context}\nMessage: Hey, let's start a new conversation.`;
+  const history = resetChat(chatId);
+  const chatModel = resolveChatModel(chatId);
 
-  history.push({ role: "user", content: initialMessage });
+  history.push({
+    role: "user",
+    content: buildMessageContent(
+      "Hey, let's start a new conversation.",
+      messageContext,
+    ),
+  });
 
   const generatedImages: InputFile[] = [];
 
@@ -119,7 +136,6 @@ export async function newChat({
       messages: history,
       tools: {
         googleSearch: googleSearchTool,
-        generateImage: createGenerateImageTool(generatedImages),
       },
       stopWhen: stepCountIs(5),
     });
