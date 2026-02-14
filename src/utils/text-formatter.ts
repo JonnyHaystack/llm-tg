@@ -5,38 +5,106 @@ export function renderTelegramHTML(input: string): string {
   // 2) Escape everything first
   text = escapeHTML(text);
 
-  // 3) Code blocks (must come before inline formatting)
+  // 3) Protect code blocks and inline code from later markdown transforms
+  const codeBlocks: string[] = [];
+  const inlineCodes: string[] = [];
+  text = protectCodeBlocks(text, codeBlocks);
+  text = protectInlineCode(text, inlineCodes);
+
+  // 4) Links
   text = text.replace(
-    /```([\s\S]*?)```/g,
-    (_, code) => `<pre><code>${code.trim()}</code></pre>`,
+    /\[([^\]\n]+)\]\(([^()\n]*(?:\([^\)\n]*\)[^()\n]*)*)\)/g,
+    '<a href="$2">$1</a>',
   );
 
-  // 4) Inline code
-  text = text.replace(/`([^`\n]+)`/g, `<code>$1</code>`);
+  // 5) Headings (Telegram has no heading tag, map to bold line)
+  text = text.replace(/^(#{1,6})[ \t]+(.+)$/gm, (_, __, content) => {
+    return `<b>${content.trim()}</b>`;
+  });
 
-  // 5) Bold / Italic
-  text = text.replace(/\*\*(.+?)\*\*/g, `<b>$1</b>`);
-  text = text.replace(/_(.+?)_/g, `<i>$1</i>`);
+  // 6) Blockquotes
+  text = renderBlockquotes(text);
 
-  // 6) Lists
+  // 7) Bold / Italic / Strikethrough
+  text = text.replace(/~~(?=\S)(.+?\S)~~/g, `<s>$1</s>`);
+  text = text.replace(/\*\*(?=\S)(.+?\S)\*\*(?!\*)/g, `<b>$1</b>`);
+  text = text.replace(/(^|[^*])\*(?=\S)(.+?\S)\*(?!\*)/g, "$1<i>$2</i>");
+  text = text.replace(/(^|[^\w])_(?=\S)(.+?\S)_(?!\w)/g, "$1<i>$2</i>");
+
+  // 8) Lists
   text = renderLists(text);
 
-  // 7) Paragraphs
-  text = text
-    .split(/\n{2,}/)
-    .map((block) => {
-      if (
-        block.startsWith("<pre>") ||
-        block.startsWith("<ul>") ||
-        block.startsWith("<ol>")
-      ) {
-        return block;
-      }
-      return block;
-    })
-    .join("\n\n");
+  // 9) Restore protected code spans
+  text = restoreInlineCode(text, inlineCodes);
+  text = restoreCodeBlocks(text, codeBlocks);
 
   return text.trim();
+}
+
+function protectCodeBlocks(input: string, store: string[]): string {
+  return input.replace(/```(?:([^\n`]*)\n)?([\s\S]*?)```/g, (_, __: string | undefined, code: string) => {
+    const normalized = code.replace(/^\n/, "");
+    const token = `\u0000CB${store.length}\u0000`;
+    store.push(`<pre><code>${normalized}</code></pre>`);
+    return token;
+  });
+}
+
+function protectInlineCode(input: string, store: string[]): string {
+  let text = input.replace(/``([\s\S]*?)``/g, (_, code: string) => {
+    const token = `\u0000IC${store.length}\u0000`;
+    store.push(`<code>${code}</code>`);
+    return token;
+  });
+
+  text = text.replace(/`([^`\n]+)`/g, (_, code: string) => {
+    const token = `\u0000IC${store.length}\u0000`;
+    store.push(`<code>${code}</code>`);
+    return token;
+  });
+
+  return text;
+}
+
+function restoreInlineCode(input: string, store: string[]): string {
+  return input.replace(/\u0000IC(\d+)\u0000/g, (_, index: string) => {
+    return store[Number(index)] ?? "";
+  });
+}
+
+function restoreCodeBlocks(input: string, store: string[]): string {
+  return input.replace(/\u0000CB(\d+)\u0000/g, (_, index: string) => {
+    return store[Number(index)] ?? "";
+  });
+}
+
+function renderBlockquotes(input: string): string {
+  const lines = input.split("\n");
+  const out: string[] = [];
+  let quoteBuffer: string[] = [];
+
+  const flushQuote = () => {
+    if (quoteBuffer.length === 0) {
+      return;
+    }
+
+    out.push(`<blockquote>${quoteBuffer.join("\n")}</blockquote>`);
+    quoteBuffer = [];
+  };
+
+  for (const line of lines) {
+    const match = /^&gt;[ \t]?(.*)$/.exec(line);
+    if (match) {
+      quoteBuffer.push(match[1]);
+      continue;
+    }
+
+    flushQuote();
+    out.push(line);
+  }
+
+  flushQuote();
+  return out.join("\n");
 }
 
 function renderLists(input: string): string {

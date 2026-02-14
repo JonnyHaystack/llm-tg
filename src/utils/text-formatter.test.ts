@@ -37,6 +37,23 @@ describe("text-formatter", () => {
         expected: "<pre><code>const x = 1;\n</code></pre>",
       },
       {
+        name: "code block language tag stripped",
+        input: "```cpp\nfor (int i = 0; i < 10; ++i) {\n  // do something with i\n}\n```",
+        expected:
+          "<pre><code>for (int i = 0; i &lt; 10; ++i) {\n  // do something with i\n}\n</code></pre>",
+      },
+      {
+        name: "code block csharp language tag stripped",
+        input: "```c#\nif (x < 10) {\n  Console.WriteLine(x);\n}\n```",
+        expected:
+          "<pre><code>if (x &lt; 10) {\n  Console.WriteLine(x);\n}\n</code></pre>",
+      },
+      {
+        name: "code block info string stripped",
+        input: "```typescript title=main.ts\nconst n = values[i];\n```",
+        expected: "<pre><code>const n = values[i];\n</code></pre>",
+      },
+      {
         name: "unclosed bold escaped",
         input: "**bold",
         expected: "**bold",
@@ -65,6 +82,16 @@ describe("text-formatter", () => {
         name: "mixed formatting",
         input: "**Bold** and *italic* with `code`",
         expected: "<b>Bold</b> and <i>italic</i> with <code>code</code>",
+      },
+      {
+        name: "strikethrough markdown",
+        input: "~~deprecated~~",
+        expected: "<s>deprecated</s>",
+      },
+      {
+        name: "blockquote markdown",
+        input: "> quoted",
+        expected: "<blockquote>quoted</blockquote>",
       },
       {
         name: "nested formatting",
@@ -248,6 +275,24 @@ describe("text-formatter", () => {
     );
   });
 
+  test("handles code block language tags", async () => {
+    const input = "```ts\nconst v = arr[i] < 10;\n```";
+    const result = await format(input);
+    expect(result).toBe("<pre><code>const v = arr[i] &lt; 10;\n</code></pre>");
+  });
+
+  test("handles csharp code block language tags", async () => {
+    const input = "```c#\nconst v = arr[i] < 10;\n```";
+    const result = await format(input);
+    expect(result).toBe("<pre><code>const v = arr[i] &lt; 10;\n</code></pre>");
+  });
+
+  test("handles code fence info strings", async () => {
+    const input = "```ts title=snippet.ts\nconst v = arr[i] < 10;\n```";
+    const result = await format(input);
+    expect(result).toBe("<pre><code>const v = arr[i] &lt; 10;\n</code></pre>");
+  });
+
   test("handles real-world AI response", async () => {
     const input =
       "Here's the solution:\n\n**Steps:**\n1. Install package\n2. Run `npm install`\n3. Done!\n\nNote: This costs $10-20.";
@@ -255,6 +300,30 @@ describe("text-formatter", () => {
     expect(result).toContain("<b>Steps:</b>");
     expect(result).toContain("$10-20.");
     expect(result).toContain("<code>npm install</code>");
+  });
+
+  test("renders markdown heading as bold line", async () => {
+    const input = "### 1) Per-User Facts";
+    const result = await format(input);
+    expect(result).toBe("<b>1) Per-User Facts</b>");
+  });
+
+  test("renders multiple heading levels as bold lines", async () => {
+    const input = "# Title\n## Subtitle\n#### Details";
+    const result = await format(input);
+    expect(result).toBe("<b>Title</b>\n<b>Subtitle</b>\n<b>Details</b>");
+  });
+
+  test("renders blockquote lines into blockquote tag", async () => {
+    const input = "> first line\n> second line";
+    const result = await format(input);
+    expect(result).toBe("<blockquote>first line\nsecond line</blockquote>");
+  });
+
+  test("renders strikethrough markdown", async () => {
+    const input = "This is ~~old~~ now";
+    const result = await format(input);
+    expect(result).toBe("This is <s>old</s> now");
   });
 
   test("escapes unclosed bold marker", async () => {
