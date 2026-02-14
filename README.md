@@ -15,6 +15,7 @@ A Telegram bot powered by OpenRouter AI with multimodal support (text + images) 
 
 - `/g <message>` - Send a message to the AI
 - `/newchat` - Start a fresh conversation (clears history)
+- `/compact` - Summarize and compact context with per-user memory (keeps summary + latest turns)
 - `/gen <prompt>` - Generate an image from a text prompt
 
 ### Multimodal (Image + Text)

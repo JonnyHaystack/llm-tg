@@ -4,6 +4,7 @@ import { handleNewChatCommand } from "./commands/new-chat";
 import { handleChatCommand } from "./commands/chat";
 import { handleSwitchModelCommand } from "./commands/switch-model";
 import { handleWhichModelCommand } from "./commands/which-model";
+import { handleCompactCommand } from "./commands/compact";
 
 import { handleMessage, handlePhoto } from "./handlers/message";
 
@@ -16,6 +17,7 @@ export function registerRoutes(bot: Bot) {
 
   // Chat management
   bot.command("newchat", handleNewChatCommand);
+  bot.command("compact", handleCompactCommand);
   bot.command("switchmodel", handleSwitchModelCommand);
   bot.command("whichmodel", handleWhichModelCommand);
 

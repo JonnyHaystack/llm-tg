@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "dev": "bun --watch index.ts"
+    "dev": "bun ./scripts/dev.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.1",

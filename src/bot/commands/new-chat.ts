@@ -25,6 +25,7 @@ export async function handleNewChatCommand(ctx: CommandContext<Context>) {
       chatId: ctx.chat.id.toString(),
       messageContext: {
         firstname: ctx.from.first_name || ctx.from.username,
+        userId: ctx.from.id.toString(),
         timestamp: new Date().toUTCString(),
       },
     });
