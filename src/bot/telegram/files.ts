@@ -1,4 +1,5 @@
 import type { Context } from "grammy";
+import { env } from "bun";
 import type { ImageData } from "../../ai/chat";
 import { logger } from "../../utils/logger";
 
@@ -18,7 +19,7 @@ export async function downloadAndEncodeImage(
       return null;
     }
 
-    const url = `https://api.telegram.org/file/bot${process.env.TELEGRAM_API_KEY}/${file.file_path}`;
+    const url = `https://api.telegram.org/file/bot${env.TELEGRAM_API_KEY}/${file.file_path}`;
 
     const response = await fetch(url);
     if (!response.ok) {

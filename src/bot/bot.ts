@@ -1,4 +1,5 @@
 import { Bot } from "grammy";
+import { env } from "bun";
 import { logger } from "../utils/logger";
 import { registerRoutes } from "./routes";
 
@@ -6,7 +7,7 @@ import { registerRoutes } from "./routes";
  * Create and configure the Telegram bot.
  */
 function createBot(): Bot {
-  const token = process.env.TELEGRAM_API_KEY;
+  const token = env.TELEGRAM_API_KEY;
   if (!token) {
     throw new Error("TELEGRAM_API_KEY environment variable is required");
   }

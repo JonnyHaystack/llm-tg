@@ -1,101 +1,19 @@
 # gemini-tg
 
-A Telegram bot powered by OpenRouter AI with multimodal support (text + images) and function calling capabilities for web search and image generation.
+A Telegram bot for chat conversations with an LLM. It supports normal text prompts, photo-backed prompts, per-chat history, model switching, and a built-in web search tool for accessing current events.
 
-## Features
+## Commands
 
-- **Multimodal Chat**: Send images along with text messages for vision-based queries
-- **Web Search**: Automatic web search when the model needs current information
-- **Image Generation**: Create images from text descriptions
-- **Conversation History**: Maintains context across messages per chat
+- `/start` or `/ping` - check that the bot is running
+- `/g <message>` - send a message to the LLM
+- `/newchat` - clear the current chat history and start a new conversation
+- `/compact` - merge older context into a rolling summary and keep the latest turns
+- `/switchmodel <groq-model-id>` - set the active model for the current chat
+- `/whichmodel` - show the active model for the current chat
 
-## Usage
+## Required env variables
 
-### Text Commands
-
-- `/g <message>` - Send a message to the AI
-- `/newchat` - Start a fresh conversation (clears history)
-- `/compact` - Summarize and compact context with per-user memory (keeps summary + latest turns)
-- `/gen <prompt>` - Generate an image from a text prompt
-
-### Multimodal (Image + Text)
-
-You can include images in three ways:
-
-1. **Send image with /g command**: Attach an image and use `/g your question` as the caption
-2. **Reply to bot with image**: Send an image as a reply to any bot message
-3. **Reply to image message**: Reply to any message containing an image with `/g your question`
-
-The bot will analyze the image(s) along with your text and provide relevant responses.
-
-## Architecture
-
-The bot uses Gemini's function calling feature to provide enhanced capabilities:
-
-### Function Calling Flow
-
-1. **User sends message** → Telegram bot receives it
-2. **Chat model processes message** → May request function calls (web search or image generation)
-3. **Bot executes functions** → Performs the actual operations
-4. **Results sent back to model** → Model uses results to formulate final response
-5. **Response sent to user** → Text and/or images returned via Telegram
-
-### Key Components
-
-- **`openrouter.ts`**: Creates the main chat model using OpenRouter
-- **`gemini.ts`**: Provides Gemini models for tool functions (web search and image generation)
-- **`chat.ts`**: Handles the function calling loop - when the model requests a function, executes it and feeds results back
-- **`web-search.ts`**: Executes web searches using Gemini's Google Search grounding tool
-
-- **`index.ts`**: Telegram bot handlers that coordinate everything and send responses
-
-### How It Works
-
-The chat model declares two function tools:
-- `googleSearch`: For finding current information via web search
-- `generateImage`: For creating images from text prompts
-
-When the model wants to use these tools, it returns a function call request. The bot:
-1. Executes the requested function (search or image generation)
-2. Sends the results back to the model using `createPartFromFunctionResponse`
-3. The model uses those results to generate its final response
-4. The bot sends the text and any images to the user
-
-This architecture keeps the conversation context intact while allowing the model to access external tools when needed.
-
-### Multimodal Support
-
-The bot supports Gemini's vision capabilities by:
-1. Detecting images in messages (photos attached to current message or replied message)
-2. Downloading images from Telegram's API
-3. Converting images to base64 format
-4. Sending images as inline data along with text to Gemini
-5. The model can then analyze images and respond based on visual content
-
-Images are sent as `Part` objects with `inlineData` containing the base64-encoded image data and MIME type.
-
-## Setup
-
-### Environment Variables
-
-You need to set the following environment variables:
-
-- `OPENROUTER_API_KEY` - Your OpenRouter API key (for main chat model)
-- `GEMINI_API_KEY` - Your Google Gemini API key (for web search and image generation tools)
-- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
-
-### Installation
-
-To install dependencies:
-
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.3. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+- `TELEGRAM_API_KEY` - Telegram bot token
+- `GROQ_API_KEY` - API key for the main chat model
+- `GEMINI_API_KEY` - API key for the web search tool
+- `WEB_SEARCH_MODEL_ID` - Gemini model used for search, for example `gemini-2.5-flash-lite`

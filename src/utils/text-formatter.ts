@@ -13,7 +13,7 @@ export function renderTelegramHTML(input: string): string {
 
   // 4) Links
   text = text.replace(
-    /\[([^\]\n]+)\]\(([^()\n]*(?:\([^\)\n]*\)[^()\n]*)*)\)/g,
+    /\[([^\]\n]+)\]\(([^()\n]*(?:\([^)\n]*\)[^()\n]*)*)\)/g,
     '<a href="$2">$1</a>',
   );
 
@@ -41,10 +41,13 @@ export function renderTelegramHTML(input: string): string {
   return text.trim();
 }
 
+const INLINE_CODE_TOKEN_PREFIX = "%%TGIC";
+const CODE_BLOCK_TOKEN_PREFIX = "%%TGCB";
+
 function protectCodeBlocks(input: string, store: string[]): string {
   return input.replace(/```(?:([^\n`]*)\n)?([\s\S]*?)```/g, (_, __: string | undefined, code: string) => {
     const normalized = code.replace(/^\n/, "");
-    const token = `\u0000CB${store.length}\u0000`;
+    const token = `${CODE_BLOCK_TOKEN_PREFIX}${store.length}%%`;
     store.push(`<pre><code>${normalized}</code></pre>`);
     return token;
   });
@@ -52,13 +55,13 @@ function protectCodeBlocks(input: string, store: string[]): string {
 
 function protectInlineCode(input: string, store: string[]): string {
   let text = input.replace(/``([\s\S]*?)``/g, (_, code: string) => {
-    const token = `\u0000IC${store.length}\u0000`;
+    const token = `${INLINE_CODE_TOKEN_PREFIX}${store.length}%%`;
     store.push(`<code>${code}</code>`);
     return token;
   });
 
   text = text.replace(/`([^`\n]+)`/g, (_, code: string) => {
-    const token = `\u0000IC${store.length}\u0000`;
+    const token = `${INLINE_CODE_TOKEN_PREFIX}${store.length}%%`;
     store.push(`<code>${code}</code>`);
     return token;
   });
@@ -67,13 +70,13 @@ function protectInlineCode(input: string, store: string[]): string {
 }
 
 function restoreInlineCode(input: string, store: string[]): string {
-  return input.replace(/\u0000IC(\d+)\u0000/g, (_, index: string) => {
+  return input.replace(/%%TGIC(\d+)%%/g, (_, index: string) => {
     return store[Number(index)] ?? "";
   });
 }
 
 function restoreCodeBlocks(input: string, store: string[]): string {
-  return input.replace(/\u0000CB(\d+)\u0000/g, (_, index: string) => {
+  return input.replace(/%%TGCB(\d+)%%/g, (_, index: string) => {
     return store[Number(index)] ?? "";
   });
 }

@@ -9,18 +9,18 @@
     "dev": "bun ./scripts/dev.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.1.1",
+    "@biomejs/biome": "^2.4.14",
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.13",
-    "@ai-sdk/groq": "^3.0.15",
-    "@openrouter/ai-sdk-provider": "^2.0.2",
-    "ai": "^6.0.49",
-    "grammy": "^1.37.0",
-    "zod": "^4.3.6"
+    "@ai-sdk/google": "^3.0.68",
+    "@ai-sdk/groq": "^3.0.38",
+    "@openrouter/ai-sdk-provider": "^2.9.0",
+    "ai": "^6.0.175",
+    "grammy": "^1.42.0",
+    "zod": "^4.4.3"
   }
 }

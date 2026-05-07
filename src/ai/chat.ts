@@ -1,4 +1,4 @@
-import { generateText, stepCountIs, type UserContent } from "ai";
+import { generateText, stepCountIs, type ModelMessage, type UserContent } from "ai";
 import { logger } from "../utils/logger";
 import {
   compactChatHistory,
@@ -11,6 +11,9 @@ import {
 import { groq } from "./providers/groq";
 import { googleSearchTool } from "./tools/web-search";
 import type { InputFile } from "grammy";
+import { env } from "bun";
+
+export const DEFAULT_MODEL_ID = env.GROQ_DEFAULT_MODEL_ID!;
 
 export type MessageContext = {
   firstname: string | undefined;
@@ -45,16 +48,17 @@ export type CompactChatResult = {
 
 export const systemPrompt = [
   "You are a helpful chat bot in a group chat setting. You should comply to user requests wherever possible.",
-  "You must only respond in a small subset of valid markdown: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\\ncode\\n```",
-  "Don't worry about formalities, but respond in a pleasant manner.",
+  "You must only respond in a small subset of valid markdown: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\\ncode\\n```. Tables, math formatting, etc. are not supported.",
   "Be concise while still conveying substantially all information relevant to any question.",
+  "Don't worry about formalities, but respond in a pleasant manner.",
 ].join("\n");
 
-export const DEFAULT_MODEL_ID = "moonshotai/kimi-k2-instruct-0905";
 export const DEFAULT_COMPACT_KEEP_TURNS = 5;
 
 const compactSystemPrompt = [
   "You are summarizing a Telegram chat memory for future context retention.",
+  "If an existing memory summary is provided, merge it with the newer conversation into a single replacement summary.",
+  "Prefer newer information when details conflict, and remove items that are clearly resolved or outdated.",
   "Return concise markdown with these exact sections:",
   "1) Per-User Facts",
   "2) Per-User Preferences",
@@ -67,6 +71,7 @@ const compactSystemPrompt = [
 
 const compactUserPrompt = [
   "Summarize the conversation so far into compact long-term memory.",
+  "Merge any existing memory summary provided earlier into one updated summary.",
   "Prioritize decisions, constraints, preferences, and pending work per participant.",
   "Keep it brief but complete.",
 ].join("\n");
@@ -87,6 +92,36 @@ function buildSystemPrompt(chatId: string): string {
     "Conversation memory summary (high priority context):",
     summary,
   ].join("\n\n");
+}
+
+export function buildCompactMessages({
+  history,
+  existingSummary,
+}: {
+  history: ModelMessage[];
+  existingSummary?: string;
+}): ModelMessage[] {
+  const compactMessages: ModelMessage[] = [];
+  const summary = existingSummary?.trim();
+
+  if (summary) {
+    compactMessages.push({
+      role: "user",
+      content: [
+        "Existing conversation memory summary to preserve and update:",
+        summary,
+        "Merge the newer conversation that follows into this memory. Preserve durable details unless newer context supersedes them.",
+      ].join("\n\n"),
+    });
+  }
+
+  compactMessages.push(...history);
+  compactMessages.push({
+    role: "user",
+    content: compactUserPrompt,
+  });
+
+  return compactMessages;
 }
 
 function buildMessageContent(
@@ -123,6 +158,8 @@ export async function sendMessage({
   const history = getOrCreateChat(chatId);
   const chatModel = resolveChatModel(chatId);
 
+  const historyLength = history.length;
+
   // Add to history
   history.push({
     role: "user",
@@ -150,6 +187,10 @@ export async function sendMessage({
     };
   } catch (error) {
     log.error("ai.chat.error", { error });
+
+    // Remove last user messages from history to avoid repeated failures
+    history.splice(historyLength);
+
     throw error;
   }
 }
@@ -208,10 +249,10 @@ export async function compactChat({
 }): Promise<CompactChatResult> {
   const log = logger.child({ chatId, keepTurns });
   const history = getOrCreateChat(chatId);
+  const existingSummary = getChatSummary(chatId)?.trim();
   const originalMessages = history.length;
 
   if (originalMessages === 0) {
-    const existingSummary = getChatSummary(chatId)?.trim();
     if (existingSummary) {
       return {
         summary: existingSummary,
@@ -230,13 +271,7 @@ export async function compactChat({
     const summaryResult = await generateText({
       model: chatModel,
       system: compactSystemPrompt,
-      messages: [
-        ...history,
-        {
-          role: "user",
-          content: compactUserPrompt,
-        },
-      ],
+      messages: buildCompactMessages({ history, existingSummary }),
       stopWhen: stepCountIs(1),
     });
 

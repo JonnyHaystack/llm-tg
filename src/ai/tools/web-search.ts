@@ -2,6 +2,7 @@ import { tool, zodSchema, generateText } from "ai";
 import { z } from "zod";
 import { google } from "../providers/gemini";
 import { logger } from "../../utils/logger";
+import { env } from 'bun';
 
 const systemPrompt = [
   "You are a web search assistant. Find relevant information based on the user's query.",
@@ -9,7 +10,7 @@ const systemPrompt = [
   "Provide concise and accurate responses conveying only the necessary information.",
 ].join("\n");
 
-const searchModel = google("gemini-2.5-flash-lite");
+const searchModel = google(env.WEB_SEARCH_MODEL_ID!);
 
 export const googleSearchTool = tool({
   description:
