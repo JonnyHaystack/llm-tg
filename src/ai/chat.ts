@@ -8,9 +8,12 @@ import { logger } from "../utils/logger";
 import {
   addChatTokenUsage,
   getChatModelId,
+  getChatSummary,
   getChatTokenUsage,
+  getLastContextTokens,
   getOrCreateChat,
   resetChat,
+  setLastContextTokens,
 } from "./session";
 import { groq } from "./providers/groq";
 import { googleSearchTool } from "./tools/web-search";
@@ -56,16 +59,38 @@ export type ChatDebugStats = {
   otherMessages: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  contextTokens?: number;
+  summaryChars: number;
 };
 
-export const systemPrompt = [
+export const BASE_SYSTEM_PROMPT = [
   "You are a helpful chat bot in a group chat setting.",
-  "You must only respond in a small subset of valid markdown: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\\ncode\\n```. Tables, math formatting, etc. are not supported.",
+  "You must only respond in a small subset of valid markdown: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\ncode\n```. Tables, math formatting, etc. are not supported.",
   "Be concise while still conveying substantially all information relevant to any question.",
   "Don't worry about formalities, but respond in a pleasant manner.",
 ].join("\n");
 
-function resolveChatModel(chatId: string) {
+/**
+ * The system prompt for a chat, with its compaction summary folded in when the
+ * conversation has been compacted.
+ */
+export function buildSystemPrompt(chatId: string): string {
+  const summary = getChatSummary(chatId);
+  if (!summary) {
+    return BASE_SYSTEM_PROMPT;
+  }
+
+  return [
+    BASE_SYSTEM_PROMPT,
+    "",
+    "The earlier part of this conversation was compacted to save space. The summary below is established context you already know - continue the conversation naturally from it, and don't mention that a summary exists unless asked.",
+    "<conversation_summary>",
+    summary,
+    "</conversation_summary>",
+  ].join("\n");
+}
+
+export function resolveChatModel(chatId: string) {
   const selection = getChatModelId(chatId);
   return groq(selection ?? DEFAULT_MODEL_ID);
 }
@@ -98,12 +123,24 @@ type MeasuredResult = {
   totalUsage?: { inputTokens?: number; outputTokens?: number };
 };
 
+/** The slice of a generateText result that carries the final step's counts. */
+type ContextMeasuredResult = {
+  usage?: { inputTokens?: number; outputTokens?: number };
+};
+
 function finiteOrUndefined(value: number | undefined): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
     ? value
     : undefined;
 }
 
+/**
+ * Add what a finished turn cost to the chat's running totals.
+ *
+ * `result.totalUsage` sums every step, so it is what the turn actually billed
+ * once tool calls are counted - unlike `result.usage`, which covers the final
+ * step alone.
+ */
 export function recordTurnUsage({
   chatId,
   result,
@@ -115,6 +152,33 @@ export function recordTurnUsage({
     inputTokens: finiteOrUndefined(result.totalUsage?.inputTokens),
     outputTokens: finiteOrUndefined(result.totalUsage?.outputTokens),
   });
+}
+
+/**
+ * Record how big the context was after a turn, which is what auto-compaction
+ * triggers on.
+ *
+ * This deliberately reads `result.usage` - the final step alone, whose input is
+ * the system prompt plus the whole history - rather than `result.totalUsage`,
+ * which sums every step and would wildly overcount. Provider-reported usage is
+ * the only source: if it is missing, the previous measurement is left in place
+ * rather than estimated.
+ */
+export function recordContextSize({
+  chatId,
+  result,
+}: {
+  chatId: string;
+  result: ContextMeasuredResult;
+}) {
+  const inputTokens = finiteOrUndefined(result.usage?.inputTokens);
+  const outputTokens = finiteOrUndefined(result.usage?.outputTokens);
+
+  if (inputTokens === undefined || outputTokens === undefined) {
+    return;
+  }
+
+  setLastContextTokens(chatId, inputTokens + outputTokens);
 }
 
 export function getChatDebugStats(chatId: string): ChatDebugStats {
@@ -140,6 +204,8 @@ export function getChatDebugStats(chatId: string): ChatDebugStats {
     otherMessages: history.length - userMessages - assistantMessages,
     totalInputTokens: usage.totalInputTokens,
     totalOutputTokens: usage.totalOutputTokens,
+    contextTokens: getLastContextTokens(chatId),
+    summaryChars: getChatSummary(chatId)?.length ?? 0,
   };
 }
 
@@ -147,7 +213,7 @@ export async function sendMessage({
   chatId,
   messageContext,
   message,
-  images
+  images,
 }: SendMessageParams): Promise<SendMessageResult> {
   const log = logger.child({ chatId });
   const chatModel = resolveChatModel(chatId);
@@ -164,7 +230,7 @@ export async function sendMessage({
   try {
     const result = await generateText({
       model: chatModel,
-      system: systemPrompt,
+      system: buildSystemPrompt(chatId),
       messages,
       tools: {
         googleSearch: googleSearchTool,
@@ -174,6 +240,7 @@ export async function sendMessage({
 
     history.push(userMessage, ...result.response.messages);
     recordTurnUsage({ chatId, result });
+    recordContextSize({ chatId, result });
 
     return {
       text: result.text,

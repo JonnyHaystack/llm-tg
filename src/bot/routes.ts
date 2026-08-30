@@ -2,6 +2,7 @@ import type { Bot } from "grammy";
 import { handleStartCommand } from "./commands/start";
 import { handleChatInfoCommand } from "./commands/chatinfo";
 import { handleNewChatCommand } from "./commands/new-chat";
+import { handleCompactCommand } from "./commands/compact";
 import { handleChatCommand } from "./commands/chat";
 import { handleDebugStatsCommand } from "./commands/debug-stats";
 import { handleSwitchModelCommand } from "./commands/switch-model";
@@ -23,6 +24,7 @@ export function registerRoutes(bot: Bot) {
 
   // Chat management
   bot.command("newchat", handleNewChatCommand);
+  bot.command("compact", handleCompactCommand);
   bot.command("debug", handleDebugStatsCommand);
   bot.command("switchmodel", handleSwitchModelCommand);
   bot.command("whichmodel", handleWhichModelCommand);

@@ -1,5 +1,6 @@
 import type { Context } from "grammy";
 import { sendMessage } from "../../ai/chat";
+import { formatCompactionNotice, maybeAutoCompact } from "../../ai/compaction";
 import { logger } from "../../utils/logger";
 import { sendResponse } from "../telegram/response";
 import { extractImagesFromCtx } from "../telegram/files";
@@ -13,8 +14,9 @@ export async function handleChatCommand(ctx: Context) {
     return;
   }
 
+  const chatId = ctx.chat.id.toString();
   const log = logger.child({
-    chatId: ctx.chat.id.toString(),
+    chatId,
     handler: "command.chat",
     messageId: ctx.message.message_id,
   });
@@ -30,7 +32,7 @@ export async function handleChatCommand(ctx: Context) {
     const images = await extractImagesFromCtx(ctx);
 
     const response = await sendMessage({
-      chatId: ctx.chat.id.toString(),
+      chatId,
       messageContext: {
         firstname: ctx.from.first_name || ctx.from.username,
         userId: ctx.from.id.toString(),
@@ -48,5 +50,15 @@ export async function handleChatCommand(ctx: Context) {
   } catch (e) {
     await ctx.reply("Couldn't generate a response");
     log.error("command.chat.error", e);
+    return;
+  }
+
+  try {
+    const compaction = await maybeAutoCompact({ chatId });
+    if (compaction) {
+      await ctx.reply(formatCompactionNotice(compaction));
+    }
+  } catch (e) {
+    log.error("command.chat.autocompact.error", e);
   }
 }
