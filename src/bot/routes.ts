@@ -1,10 +1,12 @@
 import type { Bot } from "grammy";
 import { handleStartCommand } from "./commands/start";
+import { handleChatInfoCommand } from "./commands/chatinfo";
 import { handleNewChatCommand } from "./commands/new-chat";
 import { handleChatCommand } from "./commands/chat";
 import { handleDebugStatsCommand } from "./commands/debug-stats";
 import { handleSwitchModelCommand } from "./commands/switch-model";
 import { handleWhichModelCommand } from "./commands/which-model";
+import { requireAuthorizedChat } from "./auth";
 
 import { handleMessage, handlePhoto } from "./handlers/message";
 
@@ -12,8 +14,12 @@ import { handleMessage, handlePhoto } from "./handlers/message";
  * Register all bot commands and message handlers.
  */
 export function registerRoutes(bot: Bot) {
-  // Status commands
+  // Unauthed Commands
   bot.command(["start", "ping"], handleStartCommand);
+  bot.command("chatinfo", handleChatInfoCommand);
+
+  // Authed Commands
+  bot.use(requireAuthorizedChat);
 
   // Chat management
   bot.command("newchat", handleNewChatCommand);

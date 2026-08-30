@@ -2,6 +2,7 @@ import { Bot } from "grammy";
 import { env } from "bun";
 import { logger } from "../utils/logger";
 import { registerRoutes } from "./routes";
+import { allowedChatIds } from "./auth";
 
 /**
  * Create and configure the Telegram bot.
@@ -31,6 +32,10 @@ export async function startBot() {
   const bot = createBot();
   registerRoutes(bot);
 
+  if (allowedChatIds.size === 0) {
+    logger.warn("auth.allowlist_empty");
+  }
+
   await bot.start();
-  logger.info("app.started");
+  logger.info("app.started", { allowedChats: allowedChatIds.size });
 }

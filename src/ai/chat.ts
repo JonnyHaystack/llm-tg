@@ -104,13 +104,6 @@ function finiteOrUndefined(value: number | undefined): number | undefined {
     : undefined;
 }
 
-/**
- * Add what a finished turn cost to the chat's running totals.
- *
- * `result.totalUsage` sums every step, so it is what the turn actually billed
- * once tool calls are counted - unlike `result.usage`, which covers the final
- * step alone.
- */
 export function recordTurnUsage({
   chatId,
   result,
