@@ -43,6 +43,7 @@ export async function handleChatCommand(ctx: Context) {
     });
 
     await sendResponse(ctx, response);
+
     log.info("command.chat.success");
   } catch (e) {
     await ctx.reply("Couldn't generate a response");

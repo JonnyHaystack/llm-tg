@@ -11,7 +11,5 @@ export async function handleStartCommand(ctx: CommandContext<Context>) {
     messageId: ctx.message?.message_id,
   });
 
-  const react = ctx.react("👻");
-  const reply = ctx.reply("Up and running! 🫡");
-  await Promise.allSettled([react, reply]);
+  await ctx.reply("Up and running! 🫡");
 }
