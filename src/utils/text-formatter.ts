@@ -45,12 +45,15 @@ const INLINE_CODE_TOKEN_PREFIX = "%%TGIC";
 const CODE_BLOCK_TOKEN_PREFIX = "%%TGCB";
 
 function protectCodeBlocks(input: string, store: string[]): string {
-  return input.replace(/```(?:([^\n`]*)\n)?([\s\S]*?)```/g, (_, __: string | undefined, code: string) => {
-    const normalized = code.replace(/^\n/, "");
-    const token = `${CODE_BLOCK_TOKEN_PREFIX}${store.length}%%`;
-    store.push(`<pre><code>${normalized}</code></pre>`);
-    return token;
-  });
+  return input.replace(
+    /```(?:([^\n`]*)\n)?([\s\S]*?)```/g,
+    (_, __: string | undefined, code: string) => {
+      const normalized = code.replace(/^\n/, "");
+      const token = `${CODE_BLOCK_TOKEN_PREFIX}${store.length}%%`;
+      store.push(`<pre><code>${normalized}</code></pre>`);
+      return token;
+    },
+  );
 }
 
 function protectInlineCode(input: string, store: string[]): string {

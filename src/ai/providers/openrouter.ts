@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { env } from 'bun';
+import { env } from "bun";
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 if (!OPENROUTER_API_KEY) {

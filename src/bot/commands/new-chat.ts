@@ -22,7 +22,7 @@ export async function handleNewChatCommand(ctx: CommandContext<Context>) {
     await ctx.replyWithChatAction("typing");
 
     const response = await newChat({
-      chatId: ctx.chat.id.toString()
+      chatId: ctx.chat.id.toString(),
     });
 
     await sendResponse(ctx, response);

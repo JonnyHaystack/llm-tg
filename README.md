@@ -1,6 +1,6 @@
 # gemini-tg
 
-A Telegram bot for chat conversations with an LLM. It supports normal text prompts, photo-backed prompts, per-chat history, model switching, and a built-in web search tool for accessing current events.
+A Telegram bot for chat conversations with an LLM. It supports normal text prompts, photo-backed prompts, per-chat history, model switching, and a built-in web search tool for accessing current events. It answers to `/g`, to `@mentions`, to replies, and - in Guest Mode - to mentions from chats it isn't even a member of.
 
 ## Commands
 
@@ -13,11 +13,36 @@ A Telegram bot for chat conversations with an LLM. It supports normal text promp
 - `/whichmodel` - show the active model for the current chat
 - `/debug` - show history and token usage stats for the current chat
 
+## Triggers
+
+In a chat the bot has been added to, it answers when you:
+
+- run `/g <message>`, or send a photo captioned `/g <message>`
+- `@mention` it, for example `@yourbot what is this?`
+- reply to one of its own messages
+
+Plain `@mentions` only reach the bot with **privacy mode disabled** (BotFather -> `/setprivacy` -> *Disable*). Telegram applies that setting when the bot joins a group, so remove and re-add the bot to any group it is already in.
+
+## Guest Mode
+
+With Guest Mode enabled, the bot can be `@mentioned` in chats it is *not* a member of. Telegram delivers a dedicated `guest_message` update and the bot gets exactly one reply, posted in place.
+
+To enable it: BotFather -> your bot -> *Bot Settings* (the MiniApp) -> **Guest Mode**. Confirm with `getMe`, which should then return `supports_guest_queries: true`. Restrict who can summon it under *Access* in the same panel - see [Authorization](#authorization).
+
+Because the answer has to go out before the (short-lived) guest query id expires, the bot posts a `Thinking…` placeholder immediately and edits the real answer into it once the model is done.
+
+Guest Mode has limits that come from Telegram, not from this bot:
+
+- one reply per mention, and no follow-up updates unless the bot is mentioned again
+- no access to the chat's message history or member list
+- no image output: guest replies are inline query results, which can only carry images by public URL, and the bot generates raw bytes
+
 ## Authorization
 
-Only chats listed in `ALLOWED_CHAT_IDS` can use the bot. `/start`, `/ping`, and `/chatinfo` stay available everywhere; every other command and any reply to the bot is silently ignored in chats that are not allowlisted.
+Two gates, at two different layers:
 
-To authorize a chat: add the bot to it, run `/chatinfo`, copy the chat ID into `ALLOWED_CHAT_IDS`, and restart the bot. The allowlist is read at startup, so changes need a restart to take effect.
+- **`ALLOWED_CHAT_IDS`** (this repo) gates chats the bot is a member of. `/start`, `/ping`, and `/chatinfo` stay available everywhere; every other command, mention, or reply is silently ignored in chats that are not allowlisted. To authorize a chat: add the bot to it, run `/chatinfo`, copy the chat ID into `ALLOWED_CHAT_IDS`, and restart. The list is read at startup, so changes need a restart.
+- **BotFather** gates *who* may talk to the bot at all, which is what covers Guest Mode: *Bot Settings* -> *Access* -> **Restrict bot usage**, then pick the allowed users. Guest mentions arrive from chats you never added the bot to, so a chat-ID allowlist can't gate them - Telegram filters by caller before the update ever reaches us. No restart needed to change it.
 
 ## Auto-compaction
 

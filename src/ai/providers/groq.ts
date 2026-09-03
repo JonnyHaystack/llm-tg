@@ -1,5 +1,5 @@
 import { createGroq } from "@ai-sdk/groq";
-import { env } from 'bun';
+import { env } from "bun";
 
 const GROQ_API_KEY = env.GROQ_API_KEY;
 if (!GROQ_API_KEY) {

@@ -36,6 +36,8 @@ export async function startBot() {
     logger.warn("auth.allowlist_empty");
   }
 
-  await bot.start();
+  await bot.start({
+    allowed_updates: ["message", "edited_message", "guest_message"],
+  });
   logger.info("app.started", { allowedChats: allowedChatIds.size });
 }

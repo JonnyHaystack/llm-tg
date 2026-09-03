@@ -38,7 +38,8 @@ describe("text-formatter", () => {
       },
       {
         name: "code block language tag stripped",
-        input: "```cpp\nfor (int i = 0; i < 10; ++i) {\n  // do something with i\n}\n```",
+        input:
+          "```cpp\nfor (int i = 0; i < 10; ++i) {\n  // do something with i\n}\n```",
         expected:
           "<pre><code>for (int i = 0; i &lt; 10; ++i) {\n  // do something with i\n}\n</code></pre>",
       },

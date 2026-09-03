@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { env } from 'bun';
+import { env } from "bun";
 
 const GEMINI_API_KEY = env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {

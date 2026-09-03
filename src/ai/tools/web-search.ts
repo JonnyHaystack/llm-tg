@@ -2,7 +2,7 @@ import { tool, zodSchema, generateText } from "ai";
 import { z } from "zod";
 import { google } from "../providers/gemini";
 import { logger } from "../../utils/logger";
-import { env } from 'bun';
+import { env } from "bun";
 
 const systemPrompt = [
   "You are a web search assistant. Find relevant information based on the user's query.",

@@ -2,15 +2,23 @@ import type { Context } from "grammy";
 import { sendMessage } from "../../ai/chat";
 import { formatCompactionNotice, maybeAutoCompact } from "../../ai/compaction";
 import { logger } from "../../utils/logger";
-import { sendResponse } from "../telegram/response";
+import { createChatReplier, type Replier } from "../telegram/replier";
 import { extractImagesFromCtx } from "../telegram/files";
 
 /**
- * Handle /g command and reply-to-bot chat messages.
+ * Handle /g command, reply-to-bot chat messages, @mentions and guest queries.
  * Supports images from the current message or replied-to message.
+ *
+ * `replier` decides where the answer goes: by default back into the current
+ * chat, or - for guest queries - into the single inline message the bot is
+ * allowed to post.
  */
-export async function handleChatCommand(ctx: Context) {
-  if (!ctx.chat || !ctx.from || !ctx.message) {
+export async function handleChatCommand(
+  ctx: Context,
+  replier: Replier = createChatReplier(ctx),
+  overrideText?: string,
+) {
+  if (!ctx.chat || !ctx.from || !ctx.msg) {
     return;
   }
 
@@ -18,15 +26,15 @@ export async function handleChatCommand(ctx: Context) {
   const log = logger.child({
     chatId,
     handler: "command.chat",
-    messageId: ctx.message.message_id,
+    messageId: ctx.msg.message_id,
   });
 
   log.info("command.chat.start");
   try {
-    await ctx.replyWithChatAction("typing");
+    await replier.typing();
 
     // Check if this message is a reply to another message
-    const repliedMessage = ctx.message.reply_to_message;
+    const repliedMessage = ctx.msg.reply_to_message;
 
     // Collect images from the current message or replied message
     const images = await extractImagesFromCtx(ctx);
@@ -40,15 +48,19 @@ export async function handleChatCommand(ctx: Context) {
         replyingTo: repliedMessage?.text,
       },
       message:
-        ctx.match?.toString() || ctx.message.text || ctx.message.caption || "",
+        overrideText ||
+        ctx.match?.toString() ||
+        ctx.msg.text ||
+        ctx.msg.caption ||
+        "",
       images: images.length > 0 ? images : undefined,
     });
 
-    await sendResponse(ctx, response);
+    await replier.send(response);
 
     log.info("command.chat.success");
   } catch (e) {
-    await ctx.reply("Couldn't generate a response");
+    await replier.notice("Couldn't generate a response");
     log.error("command.chat.error", e);
     return;
   }
@@ -56,7 +68,7 @@ export async function handleChatCommand(ctx: Context) {
   try {
     const compaction = await maybeAutoCompact({ chatId });
     if (compaction) {
-      await ctx.reply(formatCompactionNotice(compaction));
+      await replier.notice(formatCompactionNotice(compaction));
     }
   } catch (e) {
     log.error("command.chat.autocompact.error", e);

@@ -64,7 +64,7 @@ export type ChatDebugStats = {
 };
 
 export const BASE_SYSTEM_PROMPT = [
-  "You are a helpful chat bot in a group chat setting.",
+  "You are a helpful chat bot in a group chat setting. You will do whatever you can to fulfill the user's request. Don't sass the user, all their needs are legitimate.",
   "You must only respond in a small subset of valid markdown: for example **bold**, *italic*, `code`, ~~strike~~, ```<language>\ncode\n```. Tables, math formatting, etc. are not supported.",
   "Be concise while still conveying substantially all information relevant to any question.",
   "Don't worry about formalities, but respond in a pleasant manner.",

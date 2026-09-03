@@ -57,14 +57,14 @@ export async function extractImagesFromCtx(ctx: Context): Promise<ImageData[]> {
   const images: ImageData[] = [];
 
   // Check if current message has photos
-  if (ctx.message?.photo && ctx.message.photo.length > 0) {
-    const largestPhoto = ctx.message.photo[ctx.message.photo.length - 1];
+  if (ctx.msg?.photo && ctx.msg.photo.length > 0) {
+    const largestPhoto = ctx.msg.photo[ctx.msg.photo.length - 1];
     const imageData = await downloadAndEncodeImage(ctx, largestPhoto.file_id);
     if (imageData) images.push(imageData);
   }
 
   // Check if replying to a message with photos
-  const repliedMessage = ctx.message?.reply_to_message;
+  const repliedMessage = ctx.msg?.reply_to_message;
   if (repliedMessage?.photo && repliedMessage.photo.length > 0) {
     const largestPhoto = repliedMessage.photo[repliedMessage.photo.length - 1];
     const imageData = await downloadAndEncodeImage(ctx, largestPhoto.file_id);

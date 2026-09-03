@@ -24,7 +24,9 @@ export async function handleChatInfoCommand(ctx: CommandContext<Context>) {
 
   const authorized = isChatAuthorized(chatId);
   const name =
-    "title" in ctx.chat ? ctx.chat.title : ctx.chat.username || ctx.from.username;
+    "title" in ctx.chat
+      ? ctx.chat.title
+      : ctx.chat.username || ctx.from.username;
 
   const lines = [
     "## Chat Info",
