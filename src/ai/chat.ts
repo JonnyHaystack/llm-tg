@@ -12,6 +12,7 @@ import {
   getChatTokenUsage,
   getLastContextTokens,
   getOrCreateChat,
+  pushMessages,
   resetChat,
   setLastContextTokens,
 } from "./session";
@@ -83,7 +84,7 @@ export function buildSystemPrompt(chatId: string): string {
   return [
     BASE_SYSTEM_PROMPT,
     "",
-    "The earlier part of this conversation was compacted to save space. The summary below is established context you already know - continue the conversation naturally from it, and don't mention that a summary exists unless asked.",
+    "The conversation summary below is established context you already know. Continue the conversation naturally from it.",
     "<conversation_summary>",
     summary,
     "</conversation_summary>",
@@ -238,7 +239,7 @@ export async function sendMessage({
       stopWhen: stepCountIs(5),
     });
 
-    history.push(userMessage, ...result.response.messages);
+    pushMessages(chatId, userMessage, ...result.response.messages);
     recordTurnUsage({ chatId, result });
     recordContextSize({ chatId, result });
 

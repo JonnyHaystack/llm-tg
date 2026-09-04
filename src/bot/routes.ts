@@ -7,7 +7,6 @@ import { handleChatCommand } from "./commands/chat";
 import { handleDebugStatsCommand } from "./commands/debug-stats";
 import { handleSwitchModelCommand } from "./commands/switch-model";
 import { handleWhichModelCommand } from "./commands/which-model";
-import { requireAuthorizedChat } from "./auth";
 
 import { handleMessage, handlePhoto } from "./handlers/message";
 import { handleGuestMessage } from "./handlers/guest";
@@ -16,7 +15,6 @@ import { handleGuestMessage } from "./handlers/guest";
  * Register all bot commands and message handlers.
  */
 export function registerRoutes(bot: Bot) {
-  // Unauthed Commands
   bot.command(["start", "ping"], handleStartCommand);
   bot.command("chatinfo", handleChatInfoCommand);
 
@@ -25,9 +23,6 @@ export function registerRoutes(bot: Bot) {
   // ALLOWED_CHAT_IDS for a guest chat. Who may summon the bot as a guest is
   // set in BotFather (Bot Settings -> Access -> Restrict bot usage).
   bot.on("guest_message", handleGuestMessage);
-
-  // Authed Commands
-  bot.use(requireAuthorizedChat);
 
   // Chat management
   bot.command("newchat", handleNewChatCommand);

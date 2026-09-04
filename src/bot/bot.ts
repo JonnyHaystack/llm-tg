@@ -1,6 +1,7 @@
 import { Bot } from "grammy";
 import { env } from "bun";
 import { logger } from "../utils/logger";
+import { initSession } from "../ai/session";
 import { registerRoutes } from "./routes";
 import { allowedChatIds } from "./auth";
 
@@ -30,6 +31,7 @@ function createBot(): Bot {
  */
 export async function startBot() {
   const bot = createBot();
+  initSession();
   registerRoutes(bot);
 
   if (allowedChatIds.size === 0) {
