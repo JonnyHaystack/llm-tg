@@ -8,7 +8,8 @@ import {
 
 /** Where a conversation's output goes: back into the chat, or a guest reply. */
 export type Replier = {
-  typing(): Promise<unknown>;
+  /** Show the bot as typing until `work` settles. */
+  whileTyping<T>(work: () => Promise<T>): Promise<T>;
   /** Deliver the model's answer, written in markdown. */
   send(markdown: string): Promise<unknown>;
   /** Plain text outside the answer, such as errors and compaction notices. */
@@ -16,6 +17,9 @@ export type Replier = {
 };
 
 type Deliver = (text: string, parseMode?: "HTML") => Promise<unknown>;
+
+// Telegram clears a chat action after five seconds.
+const TYPING_INTERVAL_MS = 4_000;
 
 /**
  * Deliver markdown as Telegram HTML, falling back to the raw markdown when
@@ -38,7 +42,18 @@ async function deliverMarkdown(markdown: string, deliver: Deliver) {
 
 export function chatReplier(ctx: Filter<Context, "message">): Replier {
   return {
-    typing: () => ctx.replyWithChatAction("typing"),
+    async whileTyping(work) {
+      // Purely cosmetic, so a failed chat action never holds up the answer.
+      const sendTyping = () =>
+        ctx.replyWithChatAction("typing").catch(() => {});
+      sendTyping();
+      const timer = setInterval(sendTyping, TYPING_INTERVAL_MS);
+      try {
+        return await work();
+      } finally {
+        clearInterval(timer);
+      }
+    },
 
     async send(markdown) {
       const [first, ...rest] = splitMarkdown(markdown);
@@ -90,7 +105,7 @@ export async function guestReplier(
 
   return {
     // Chat actions need chat membership, which a guest doesn't have.
-    typing: async () => {},
+    whileTyping: (work) => work(),
 
     send(markdown) {
       const [first, ...rest] = splitMarkdown(markdown, MAX_MESSAGE_LENGTH - 2);

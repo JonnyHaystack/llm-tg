@@ -39,11 +39,9 @@ export function handleNewChat(ctx: CommandCtx) {
 }
 
 export async function handleCompact(ctx: CommandCtx) {
-  await ctx.replyWithChatAction("typing");
-
   let result: CompactionResult | undefined;
   try {
-    result = await compactChat(ctx.chat.id);
+    result = await chatReplier(ctx).whileTyping(() => compactChat(ctx.chat.id));
   } catch (error) {
     logger.error("compaction.failed", error, { chatId: ctx.chat.id });
     return reply(ctx, "Couldn't compact the conversation.");

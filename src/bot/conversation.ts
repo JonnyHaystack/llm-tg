@@ -33,19 +33,21 @@ async function respond(
   const { msg } = ctx;
   const log = logger.child({ chatId: msg.chat.id, messageId: msg.message_id });
 
-  await replier.typing();
   let answer: string;
   try {
-    answer = await generateReply(msg.chat.id, {
-      text: prompt,
-      images: await downloadPhotos(ctx),
-      context: {
-        firstname: msg.from.first_name,
-        userId: String(msg.from.id),
-        timestamp: new Date(msg.date * 1000).toUTCString(),
-        replyingTo: msg.reply_to_message?.text ?? msg.reply_to_message?.caption,
-      },
-    });
+    answer = await replier.whileTyping(async () =>
+      generateReply(msg.chat.id, {
+        text: prompt,
+        images: await downloadPhotos(ctx),
+        context: {
+          firstname: msg.from.first_name,
+          userId: String(msg.from.id),
+          timestamp: new Date(msg.date * 1000).toUTCString(),
+          replyingTo:
+            msg.reply_to_message?.text ?? msg.reply_to_message?.caption,
+        },
+      }),
+    );
   } catch (error) {
     log.error("conversation.failed", error);
     await replier.notice("Couldn't generate a response");
