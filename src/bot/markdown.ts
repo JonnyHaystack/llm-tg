@@ -35,10 +35,12 @@ export function markdownToTelegramHtml(markdown: string): string {
       (quote) =>
         `<blockquote>${quote.replace(/^&gt;[ \t]?/gm, "")}</blockquote>`,
     )
-    .replace(/~~(?=\S)(.+?\S)~~/g, "<s>$1</s>")
-    .replace(/\*\*(?=\S)(.+?\S)\*\*(?!\*)/g, "<b>$1</b>")
-    .replace(/(^|[^*])\*(?=\S)(.+?\S)\*(?!\*)/g, "$1<i>$2</i>")
-    .replace(/(^|\W)_(?=\S)(.+?\S)_(?!\w)/g, "$1<i>$2</i>")
+    // Emphasis only opens and closes at a word boundary, so `2**10` and
+    // `__init__` stay as written.
+    .replace(/~~(\S|\S.*?\S)~~/g, "<s>$1</s>")
+    .replace(/(^|[^\w*])\*\*(\S|\S.*?\S)\*\*(?![\w*])/g, "$1<b>$2</b>")
+    .replace(/(^|[^\w*])\*(\S|\S.*?\S)\*(?![\w*])/g, "$1<i>$2</i>")
+    .replace(/(^|\W)_([^\s_]|[^\s_].*?[^\s_])_(?!\w)/g, "$1<i>$2</i>")
     .replace(/^([ \t]*)([-*+]|\d+\.)[ \t]+/gm, (_, indent, marker) => {
       const level = Math.floor(indent.length / 2);
       const bullet = /\d/.test(marker) ? marker : level === 0 ? "•" : "◦";

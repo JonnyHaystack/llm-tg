@@ -25,6 +25,8 @@ describe("markdownToTelegramHtml", () => {
       "variable_name and another_one",
       "variable_name and another_one",
     ],
+    ["exponents", "2**10 and 3**4", "2**10 and 3**4"],
+    ["dunder names", "call __init__ first", "call __init__ first"],
     ["unclosed bold", "**bold", "**bold"],
     ["unclosed italic", "*italic", "*italic"],
     ["CRLF line endings", "one\r\ntwo", "one\ntwo"],
@@ -45,6 +47,16 @@ describe("markdownToTelegramHtml", () => {
     ["asterisk italic", "This is *italic* text", "This is <i>italic</i> text"],
     ["underscore italic", "_italic_", "<i>italic</i>"],
     ["strikethrough", "This is ~~old~~ now", "This is <s>old</s> now"],
+    [
+      "single-character spans",
+      "**B**, *i* and ~~s~~",
+      "<b>B</b>, <i>i</i> and <s>s</s>",
+    ],
+    [
+      "short bold spans side by side",
+      "**a** and **b**",
+      "<b>a</b> and <b>b</b>",
+    ],
     [
       "italic nested in bold",
       "**This is *nested* text**",
