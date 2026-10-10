@@ -1,27 +1,17 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { realpathSync } from "node:fs";
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const projectRoot = resolve(scriptDir, "..");
-const entrypoint = resolve(projectRoot, "index.ts");
-const envFile = resolve(projectRoot, ".env");
-
-const args = ["bun", "run", `--env-file=${envFile}`, "--watch", entrypoint];
-
-const child = Bun.spawn(args, {
-  cwd: projectRoot,
-  stdin: "inherit",
-  stdout: "inherit",
-  stderr: "inherit",
+// `bun --watch` ignores imports outside its working directory, comparing
+// resolved paths. Starting it from the project's resolved path keeps every
+// import watched when the project is opened through a symlink, junction or
+// subst drive.
+const watcher = Bun.spawn(["bun", "--watch", "src/index.ts"], {
+  cwd: realpathSync(process.cwd()),
+  stdio: ["inherit", "inherit", "inherit"],
 });
 
-const stopChild = () => {
-  child.kill();
-};
+// Ctrl+C reaches the watcher straight from the terminal, so wait for it to
+// stop; any other termination has to be passed on.
+process.on("SIGINT", () => {});
+process.on("SIGTERM", () => watcher.kill());
 
-process.on("SIGINT", stopChild);
-process.on("SIGTERM", stopChild);
-process.on("exit", stopChild);
-
-const exitCode = await child.exited;
-process.exit(exitCode);
+process.exitCode = await watcher.exited;
