@@ -42,6 +42,6 @@ const runner = run(bot, {
 });
 logger.info("bot.started", { username: bot.botInfo.username });
 
-const stop = () => runner.isRunning() && runner.stop();
+const stop = () => runner.stop();
 process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
