@@ -156,26 +156,38 @@ describe("handleMessage", () => {
 });
 
 describe("handleGuestMessage", () => {
-  test("claims a reply before queueing behind an earlier mention", async () => {
+  test("claims every reply at once, but answers one mention at a time", async () => {
     const chatId = uniqueChatId();
+    const first = Promise.withResolvers<unknown>();
     generateText
-      .mockResolvedValueOnce(modelAnswer("first"))
+      .mockReturnValueOnce(first.promise)
       .mockResolvedValueOnce(modelAnswer("second"));
 
-    await Promise.all([
+    const handled = Promise.all([
       handleGuestMessage(guestMention(chatId, 1)),
       handleGuestMessage(guestMention(chatId, 2)),
     ]);
+    await Bun.sleep(0);
 
-    expect(calls.map((call) => call.method)).toEqual([
-      "answerGuestQuery",
-      "answerGuestQuery",
-      "editMessageText",
-      "editMessageText",
-    ]);
+    expect(payloadsOf("answerGuestQuery")).toHaveLength(2);
+    expect(generateText).toHaveBeenCalledTimes(1);
+
+    first.resolve(modelAnswer("first"));
+    await handled;
+
     expect(payloadsOf("editMessageText")).toMatchObject([
       { inline_message_id: "inline", text: "first", parse_mode: "HTML" },
       { inline_message_id: "inline", text: "second", parse_mode: "HTML" },
     ]);
+  });
+
+  test("cuts an answer longer than one message short", async () => {
+    generateText.mockResolvedValueOnce(modelAnswer("word ".repeat(1_000)));
+
+    await handleGuestMessage(guestMention(uniqueChatId(), 1));
+
+    const [{ text }] = payloadsOf("editMessageText");
+    expect((text as string).length).toBeLessThanOrEqual(4096);
+    expect(text).toEndWith("\n…");
   });
 });
