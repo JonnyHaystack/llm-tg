@@ -33,9 +33,10 @@ async function respond(
   const { msg } = ctx;
   const log = logger.child({ chatId: msg.chat.id, messageId: msg.message_id });
 
+  await replier.typing();
+  let answer: string;
   try {
-    await replier.typing();
-    const answer = await generateReply(msg.chat.id, {
+    answer = await generateReply(msg.chat.id, {
       text: prompt,
       images: await downloadPhotos(ctx),
       context: {
@@ -45,13 +46,14 @@ async function respond(
         replyingTo: msg.reply_to_message?.text ?? msg.reply_to_message?.caption,
       },
     });
-    await replier.send(answer);
-    log.info("conversation.replied");
   } catch (error) {
     log.error("conversation.failed", error);
     await replier.notice("Couldn't generate a response");
     return;
   }
+
+  await replier.send(answer);
+  log.info("conversation.replied");
 
   try {
     const compaction = await autoCompact(msg.chat.id);

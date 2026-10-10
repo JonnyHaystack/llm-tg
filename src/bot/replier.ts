@@ -45,7 +45,10 @@ export function chatReplier(ctx: Filter<Context, "message">): Replier {
       await deliverMarkdown(first, (text, parse_mode) =>
         ctx.reply(text, {
           parse_mode,
-          reply_parameters: { message_id: ctx.msg.message_id },
+          reply_parameters: {
+            message_id: ctx.msg.message_id,
+            allow_sending_without_reply: true,
+          },
         }),
       );
       for (const chunk of rest) {

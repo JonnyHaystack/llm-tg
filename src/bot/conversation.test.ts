@@ -98,7 +98,7 @@ describe("handleMessage", () => {
         chat_id: chatId,
         text: "<b>hello</b>",
         parse_mode: "HTML",
-        reply_parameters: { message_id: 1 },
+        reply_parameters: { message_id: 1, allow_sending_without_reply: true },
       },
     ]);
   });
@@ -128,6 +128,17 @@ describe("handleMessage", () => {
     expect(payloadsOf("sendMessage")).toMatchObject([
       { text: "Couldn't generate a response" },
     ]);
+  });
+
+  test("doesn't blame the model when the answer can't be delivered", async () => {
+    failCall = ({ method }) =>
+      method === "sendMessage" ? "Bad Request: chat not found" : undefined;
+    generateText.mockResolvedValueOnce(modelAnswer("hello"));
+
+    await expect(handleMessage(gCommand(uniqueChatId(), "hi"))).rejects.toThrow(
+      "chat not found",
+    );
+    expect(payloadsOf("sendMessage")).toMatchObject([{ text: "hello" }]);
   });
 
   test("announces an automatic compaction after the answer", async () => {
