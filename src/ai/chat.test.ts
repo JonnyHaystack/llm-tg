@@ -85,4 +85,19 @@ describe("generateReply", () => {
     );
     expect(getChat(chatId).history).toEqual([]);
   });
+
+  test("treats an empty answer as a failure, leaving the chat untouched", async () => {
+    const chatId = uniqueChatId();
+    generateText.mockResolvedValueOnce({
+      text: "  ",
+      response: { messages: [reply] },
+      usage: { inputTokens: 1, outputTokens: 1 },
+      totalUsage: { inputTokens: 1, outputTokens: 1 },
+    });
+
+    await expect(generateReply(chatId, message)).rejects.toThrow(
+      "empty answer",
+    );
+    expect(getChat(chatId).history).toEqual([]);
+  });
 });

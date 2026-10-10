@@ -45,9 +45,6 @@ async function respond(
         replyingTo: msg.reply_to_message?.text ?? msg.reply_to_message?.caption,
       },
     });
-    if (!answer.trim()) {
-      throw new Error("The model returned an empty answer");
-    }
     await replier.send(answer);
     log.info("conversation.replied");
   } catch (error) {

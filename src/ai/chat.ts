@@ -76,6 +76,10 @@ export async function generateReply(
     stopWhen: stepCountIs(5),
   });
 
+  if (!result.text.trim()) {
+    throw new Error("The model returned an empty answer");
+  }
+
   updateChat(chatId, (chat) => {
     chat.history.push(userMessage, ...result.response.messages);
     addUsage(chat, result.totalUsage);
