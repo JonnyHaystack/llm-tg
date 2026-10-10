@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as ai from "ai";
 
-const dataDir = mkdtempSync(join(tmpdir(), "gemini-tg-test-"));
+const dataDir = mkdtempSync(join(tmpdir(), "llm-tg-test-"));
 
 // Fixed values, so tests never depend on a developer's .env.
 Object.assign(process.env, {

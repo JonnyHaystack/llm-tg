@@ -1,4 +1,4 @@
-# gemini-tg
+# llm-tg
 
 A Telegram bot for chat conversations with an LLM. It supports normal text prompts, photo-backed prompts, per-chat history, model switching, and a built-in web search tool for accessing current events. It answers to `/g`, to `@mentions`, to replies, and - in Guest Mode - to mentions from chats it isn't even a member of.
 

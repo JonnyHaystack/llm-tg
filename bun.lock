@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "gemini-tg",
+      "name": "llm-tg",
       "dependencies": {
         "@ai-sdk/google": "^3.0.68",
         "@ai-sdk/groq": "^3.0.38",
