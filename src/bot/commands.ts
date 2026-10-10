@@ -84,17 +84,18 @@ export function handleDebug(ctx: CommandCtx) {
 }
 
 export function handleSwitchModel(ctx: CommandCtx) {
-  const modelId = ctx.match.trim();
-  if (!modelId) {
+  const requested = ctx.match.trim();
+  if (!requested) {
     return reply(
       ctx,
-      "Usage: /switchmodel <groq-model-id>\nExample: /switchmodel moonshotai/kimi-k2-instruct-0905",
+      "Usage: /switchmodel <groq-model-id>, or /switchmodel default\nExample: /switchmodel moonshotai/kimi-k2-instruct-0905",
     );
   }
 
   updateChat(ctx.chat.id, (chat) => {
-    chat.modelId = modelId;
+    chat.modelId = requested === "default" ? undefined : requested;
   });
+  const modelId = getModelId(ctx.chat.id);
   logger.info("model.switched", { chatId: ctx.chat.id, modelId });
   return reply(ctx, `Model set to \`${modelId}\``);
 }

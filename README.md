@@ -9,7 +9,7 @@ A Telegram bot for chat conversations with an LLM. It supports normal text promp
 - `/g <message>` - send a message to the LLM
 - `/newchat` - clear the current chat history and start a new conversation
 - `/compact` - summarize the conversation so far and drop the raw history
-- `/switchmodel <groq-model-id>` - set the active model for the current chat
+- `/switchmodel <groq-model-id>` - set the active model for the current chat; `/switchmodel default` goes back to `GROQ_DEFAULT_MODEL_ID`
 - `/whichmodel` - show the active model for the current chat
 - `/debug` - show history and token usage stats for the current chat
 
