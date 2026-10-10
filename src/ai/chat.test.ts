@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { ModelMessage } from "ai";
 import { generateText, uniqueChatId } from "../test-setup";
-import { sendMessage, type UserMessage } from "./chat";
+import { generateReply, type UserMessage } from "./chat";
 import { getChat, updateChat } from "./chat-store";
 
 const message: UserMessage = {
@@ -17,7 +17,7 @@ const reply: ModelMessage = {
 
 beforeEach(() => generateText.mockReset());
 
-describe("sendMessage", () => {
+describe("generateReply", () => {
   test("appends the turn to history and records usage", async () => {
     const chatId = uniqueChatId();
     generateText.mockResolvedValueOnce({
@@ -27,7 +27,7 @@ describe("sendMessage", () => {
       totalUsage: { inputTokens: 500, outputTokens: 40 },
     });
 
-    expect(await sendMessage(chatId, message)).toBe("Hi!");
+    expect(await generateReply(chatId, message)).toBe("Hi!");
 
     const chat = getChat(chatId);
     expect(chat.history).toEqual([
@@ -65,7 +65,7 @@ describe("sendMessage", () => {
       totalUsage: { inputTokens: 1, outputTokens: 1 },
     });
 
-    await sendMessage(chatId, message);
+    await generateReply(chatId, message);
 
     const request = generateText.mock.calls[0][0];
     expect(request.model.modelId).toBe("chosen-model");
@@ -80,7 +80,9 @@ describe("sendMessage", () => {
     const chatId = uniqueChatId();
     generateText.mockRejectedValueOnce(new Error("rate limited"));
 
-    await expect(sendMessage(chatId, message)).rejects.toThrow("rate limited");
+    await expect(generateReply(chatId, message)).rejects.toThrow(
+      "rate limited",
+    );
     expect(getChat(chatId).history).toEqual([]);
   });
 });

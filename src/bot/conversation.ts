@@ -1,6 +1,6 @@
 import { sequentialize } from "@grammyjs/runner";
 import type { Context, Filter } from "grammy";
-import { sendMessage } from "../ai/chat";
+import { generateReply } from "../ai/chat";
 import { autoCompact, type CompactionResult } from "../ai/compaction";
 import { logger } from "../logger";
 import { downloadPhotos } from "./photos";
@@ -35,7 +35,7 @@ async function respond(
 
   try {
     await replier.typing();
-    const answer = await sendMessage(msg.chat.id, {
+    const answer = await generateReply(msg.chat.id, {
       text: prompt,
       images: await downloadPhotos(ctx),
       context: {

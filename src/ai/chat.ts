@@ -52,7 +52,7 @@ function buildSystemPrompt(summary: string | undefined): string {
   ].join("\n");
 }
 
-export async function sendMessage(
+export async function generateReply(
   chatId: number,
   { text, context, images }: UserMessage,
 ): Promise<string> {
