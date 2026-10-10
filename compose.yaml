@@ -1,0 +1,14 @@
+services:
+  bot:
+    build: .
+    image: llm-tg
+    env_file: .env
+    restart: unless-stopped
+    init: true
+    volumes:
+      - chats:/app/data
+    logging:
+      driver: local
+
+volumes:
+  chats:
