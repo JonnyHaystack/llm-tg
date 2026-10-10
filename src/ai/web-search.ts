@@ -16,9 +16,9 @@ const searchModel = google(config.WEB_SEARCH_MODEL_ID);
 
 export const webSearchTool = tool({
   description:
-    "A web search tool for use when you want to find information about current events or information about a URL or Image. The input to this tool should be a concise search query.",
+    "A web search tool for use when you want to find information about current events or what a web page says. The input to this tool should be a concise search query, or a URL with what to look for on it.",
   inputSchema: z.object({
-    query: z.string().describe("The search query."),
+    query: z.string().describe("The search query or URL."),
   }),
   execute: async ({ query }) => {
     logger.info("web_search", { query });
@@ -28,7 +28,10 @@ export const webSearchTool = tool({
         model: searchModel,
         system: SYSTEM_PROMPT,
         prompt: query,
-        tools: { google_search: google.tools.googleSearch({}) },
+        tools: {
+          google_search: google.tools.googleSearch({}),
+          url_context: google.tools.urlContext({}),
+        },
       });
       return text;
     } catch (error) {
