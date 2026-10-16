@@ -1,12 +1,16 @@
 import { createGroq } from "@ai-sdk/groq";
 import {
+  type AssistantModelMessage,
   type FilePart,
   generateText,
   type ModelMessage,
   stepCountIs,
+  type ToolContent,
+  type ToolModelMessage,
 } from "ai";
 import { config } from "../config";
 import { addUsage, getChat, updateChat } from "./chat-store";
+import { MAX_TOOL_CHARS, truncate } from "./transcript";
 import { webSearchTool } from "./web-search";
 
 const groq = createGroq({ apiKey: config.GROQ_API_KEY });
@@ -52,6 +56,29 @@ function buildSystemPrompt(summary: string | undefined): string {
   ].join("\n");
 }
 
+function truncateToolResult(part: ToolContent[number]): ToolContent[number] {
+  if (part.type !== "tool-result" || part.output.type !== "text") {
+    return part;
+  }
+  const value = truncate(part.output.value, MAX_TOOL_CHARS);
+  return { ...part, output: { type: "text", value } };
+}
+
+function trimForHistory(
+  messages: (AssistantModelMessage | ToolModelMessage)[],
+): ModelMessage[] {
+  return messages.map((message) => {
+    if (message.role === "tool") {
+      return { ...message, content: message.content.map(truncateToolResult) };
+    }
+    if (typeof message.content === "string") {
+      return message;
+    }
+    const content = message.content.filter((part) => part.type !== "reasoning");
+    return { ...message, content };
+  });
+}
+
 export async function generateReply(
   chatId: number,
   { text, context, images }: UserMessage,
@@ -81,7 +108,7 @@ export async function generateReply(
   }
 
   updateChat(chatId, (chat) => {
-    chat.history.push(userMessage, ...result.response.messages);
+    chat.history.push(userMessage, ...trimForHistory(result.response.messages));
     addUsage(chat, result.totalUsage);
 
     // `usage` covers only the final step, whose input is the whole context;

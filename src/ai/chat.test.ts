@@ -50,6 +50,66 @@ describe("generateReply", () => {
     expect(chat.lastContextTokens).toBe(320);
   });
 
+  test("keeps reasoning and long tool results out of history", async () => {
+    const chatId = uniqueChatId();
+    const toolCall = {
+      type: "tool-call",
+      toolCallId: "1",
+      toolName: "googleSearch",
+      input: { query: "bun" },
+    } as const;
+    const toolResult = {
+      type: "tool-result",
+      toolCallId: "1",
+      toolName: "googleSearch",
+    } as const;
+    generateText.mockResolvedValueOnce({
+      text: "Hi!",
+      response: {
+        messages: [
+          {
+            role: "assistant",
+            content: [{ type: "reasoning", text: "let me search" }, toolCall],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                ...toolResult,
+                output: { type: "text", value: "x".repeat(5_000) },
+              },
+            ],
+          },
+          {
+            role: "assistant",
+            content: [{ type: "reasoning", text: "got it" }, ...reply.content],
+          },
+        ],
+      },
+      usage: { inputTokens: 1, outputTokens: 1 },
+      totalUsage: { inputTokens: 1, outputTokens: 1 },
+    });
+
+    await generateReply(chatId, message);
+
+    expect(getChat(chatId).history.slice(1)).toEqual([
+      { role: "assistant", content: [toolCall] },
+      {
+        role: "tool",
+        content: [
+          {
+            ...toolResult,
+            output: {
+              type: "text",
+              value: `${"x".repeat(2_000)}... [truncated]`,
+            },
+          },
+        ],
+      },
+      reply,
+    ]);
+  });
+
   test("sends the chat's model, summary and history", async () => {
     const chatId = uniqueChatId();
     const earlier: ModelMessage = { role: "user", content: "earlier" };
