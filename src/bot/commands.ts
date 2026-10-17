@@ -1,27 +1,33 @@
 import type { CommandContext, Context, Filter } from "grammy";
-import { getModelId } from "../ai/chat";
-import { getChat, resetChat, updateChat } from "../ai/chat-store";
+import type { Chat, User } from "grammy/types";
+import { getChat, resetChat } from "../ai/chat-store";
+import { type CompactionResult, compactChat } from "../ai/compaction";
 import { config } from "../config";
 import { logger } from "../logger";
-import { compactConversation } from "./conversation";
-import { chatReplier } from "./replier";
+import { chatReplier, type Replier } from "./replier";
 
-type CommandCtx = CommandContext<Filter<Context, "message">>;
+export type CommandInput = { chat: Chat; from: User; replier: Replier };
 
-function reply(ctx: CommandCtx, markdown: string) {
-  return chatReplier(ctx).send(markdown);
+type Command = (input: CommandInput) => Promise<unknown>;
+
+export function formatCompactionNotice({
+  tokensBefore,
+  tokensAfter,
+}: CompactionResult): string {
+  const approximately = (tokens?: number) =>
+    tokens === undefined ? "?" : `~${tokens}`;
+
+  return `Compacted conversation history (${approximately(tokensBefore)} → ${approximately(tokensAfter)} tokens). Earlier messages are now a summary.`;
 }
 
-export function handleStart(ctx: CommandCtx) {
-  return reply(ctx, "Up and running! 🫡");
+function start({ replier }: CommandInput) {
+  return replier.send("Up and running! 🫡");
 }
 
-export function handleChatInfo(ctx: CommandCtx) {
-  const { chat, from } = ctx;
+function chatInfo({ chat, from, replier }: CommandInput) {
   const name = "title" in chat ? chat.title : chat.username;
 
-  return reply(
-    ctx,
+  return replier.send(
     [
       "## Chat Info",
       `- Chat ID: \`${chat.id}\``,
@@ -32,18 +38,27 @@ export function handleChatInfo(ctx: CommandCtx) {
   );
 }
 
-export function handleNewChat(ctx: CommandCtx) {
-  resetChat(ctx.chat.id);
-  return reply(ctx, "Chat history cleared.");
+function newChat({ chat, replier }: CommandInput) {
+  resetChat(chat.id);
+  return replier.send("Chat history cleared.");
 }
 
-export function handleCompact(ctx: CommandCtx) {
-  return compactConversation(ctx.chat.id, chatReplier(ctx));
+async function compact({ chat, replier }: CommandInput) {
+  let result: CompactionResult | undefined;
+  try {
+    result = await replier.whileTyping(() => compactChat(chat.id));
+  } catch (error) {
+    logger.error("compaction.failed", error, { chatId: chat.id });
+    return replier.send("Couldn't compact the conversation.");
+  }
+
+  return replier.send(
+    result ? formatCompactionNotice(result) : "Nothing to compact.",
+  );
 }
 
-export function handleDebug(ctx: CommandCtx) {
-  const chatId = ctx.chat.id;
-  const { history, summary, tokenUsage, lastContextTokens } = getChat(chatId);
+function debug({ chat, replier }: CommandInput) {
+  const { history, summary, tokenUsage, lastContextTokens } = getChat(chat.id);
   const { totalInputTokens, totalOutputTokens } = tokenUsage;
   const threshold = config.AUTO_COMPACT_TOKEN_THRESHOLD;
   const count = (role: string) =>
@@ -57,12 +72,11 @@ export function handleDebug(ctx: CommandCtx) {
     ? `auto at \`${threshold}\` tokens`
     : "auto-compaction off";
 
-  return reply(
-    ctx,
+  return replier.send(
     [
       "## Debug Stats",
-      `- Chat: \`${chatId}\``,
-      `- Model: \`${getModelId(chatId)}\``,
+      `- Chat: \`${chat.id}\``,
+      `- Model: \`${config.GROQ_DEFAULT_MODEL_ID}\``,
       `- History: \`${history.length}\` msgs (user \`${count("user")}\`, assistant \`${count("assistant")}\`, tool \`${count("tool")}\`)`,
       `- Context: ${context} (${autoCompaction})`,
       `- Summary: ${summary ? `\`${summary.length}\` chars` : "none"}`,
@@ -71,23 +85,21 @@ export function handleDebug(ctx: CommandCtx) {
   );
 }
 
-export function handleSwitchModel(ctx: CommandCtx) {
-  const requested = ctx.match.trim();
-  if (!requested) {
-    return reply(
-      ctx,
-      "Usage: /switchmodel <groq-model-id>, or /switchmodel default\nExample: /switchmodel moonshotai/kimi-k2-instruct-0905",
-    );
-  }
-
-  updateChat(ctx.chat.id, (chat) => {
-    chat.modelId = requested === "default" ? undefined : requested;
-  });
-  const modelId = getModelId(ctx.chat.id);
-  logger.info("model.switched", { chatId: ctx.chat.id, modelId });
-  return reply(ctx, `Model set to \`${modelId}\``);
+function whichModel({ replier }: CommandInput) {
+  return replier.send(`\`${config.GROQ_DEFAULT_MODEL_ID}\``);
 }
 
-export function handleWhichModel(ctx: CommandCtx) {
-  return reply(ctx, `\`${getModelId(ctx.chat.id)}\``);
+export const commands = new Map<string, Command>([
+  ["start", start],
+  ["ping", start],
+  ["chatinfo", chatInfo],
+  ["newchat", newChat],
+  ["compact", compact],
+  ["debug", debug],
+  ["whichmodel", whichModel],
+]);
+
+export function commandHandler(command: Command) {
+  return (ctx: CommandContext<Filter<Context, "message">>) =>
+    command({ chat: ctx.chat, from: ctx.from, replier: chatReplier(ctx) });
 }
