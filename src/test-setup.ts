@@ -12,6 +12,7 @@ Object.assign(process.env, {
   GROQ_API_KEY: "test",
   GEMINI_API_KEY: "test",
   GROQ_DEFAULT_MODEL_ID: "default-model",
+  OPENAI_COMPATIBLE_BASE_URL: "",
   WEB_SEARCH_MODEL_ID: "search-model",
   AUTO_COMPACT_TOKEN_THRESHOLD: "1000",
   CHAT_DATA_DIR: dataDir,
